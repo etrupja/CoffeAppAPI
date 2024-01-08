@@ -49,6 +49,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     file_put_contents($file, json_encode($orders));
 
     echo json_encode(["message" => "Order added successfully", "order" => $newOrder]);
+} elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+    $json_str = file_get_contents('php://input');
+    $json_obj = json_decode($json_str);
+    $id = $json_obj->id;
+
+    $found = false;
+    foreach ($orders as &$order) {
+        if ($order['id'] == $id) {
+            $order['fullName'] = htmlspecialchars($json_obj->fullName);
+            $order['email'] = htmlspecialchars($json_obj->email);
+            $order['description'] = htmlspecialchars($json_obj->description);
+            $found = true;
+            break;
+        }
+    }
+    if (!$found) {
+        http_response_code(404);
+        echo json_encode(["message" => "Order not found"]);
+    } else {
+        file_put_contents($file, json_encode($orders));
+        echo json_encode(["message" => "Order updated successfully"]);
+    }
+}
+// Handle DELETE request
+elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    parse_str(file_get_contents("php://input"), $del_vars);
+    $id = $del_vars['id'];
+
+    $orders = array_filter($orders, function($order) use ($id) {
+        return $order['id'] != $id;
+    });
+
+    file_put_contents($file, json_encode(array_values($orders)));
+    echo json_encode(["message" => "Order deleted successfully"]);
 }else {
     echo 'Request method is not supported!';
 }

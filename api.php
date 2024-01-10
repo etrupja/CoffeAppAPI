@@ -57,11 +57,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     
     echo json_encode(["message" => "Order added successfully", "order" => ["id" => $newOrderId, "fullName" => $json_obj->fullName, "email" => $json_obj->email, "description" => $json_obj->description]]);
 } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
-    // ... [PUT method implementation]
-}
-// ... [DELETE method implementation]
+    parse_str(file_get_contents("php://input"), $put_vars);
+    $json_obj = json_decode(json_encode($put_vars));
 
-else {
+    // Basic validation
+    if (!isset($json_obj->id) || !isset($json_obj->fullName) || !isset($json_obj->email) || !isset($json_obj->description)) {
+        http_response_code(400);
+        echo json_encode(["message" => "Invalid input, missing parameters"]);
+        exit;
+    }
+
+    // Update the order
+    $stmt = $pdo->prepare('UPDATE orders SET fullName = ?, email = ?, description = ? WHERE id = ?');
+    $stmt->execute([
+        htmlspecialchars($json_obj->fullName),
+        htmlspecialchars($json_obj->email),
+        htmlspecialchars($json_obj->description),
+        $json_obj->id
+    ]);
+
+    echo json_encode(["message" => "Order updated successfully"]);
+} elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    $orderId = isset($_GET['id']) ? $_GET['id'] : null;
+
+    if (!$orderId) {
+        http_response_code(400);
+        echo json_encode(["message" => "Invalid input, missing ID"]);
+        exit;
+    }
+
+    // Delete the order
+    $stmt = $pdo->prepare('DELETE FROM orders WHERE id = ?');
+    $stmt->execute([$orderId]);
+
+    echo json_encode(["message" => "Order deleted successfully"]);
+} else {
     echo 'Request method is not supported!';
 }
 
